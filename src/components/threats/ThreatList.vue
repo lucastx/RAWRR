@@ -17,6 +17,11 @@
         }}</v-btn>
       </v-col>
       <v-col cols="auto" align-self="center">
+        <v-btn medium color="primary" @click="showCreateMatrix()">{{
+          $t("generic_table_show_matrix")
+        }}</v-btn>
+      </v-col>
+      <v-col cols="auto" align-self="center">
         <v-btn
           v-if="selected.length"
           medium
@@ -151,12 +156,37 @@
       </v-sheet>
     </v-bottom-sheet>
 
+    <v-bottom-sheet v-model="matrix" scrollable>
+      <v-sheet class="text-center px-4 pt-4 overflow-y-auto">
+        <v-btn
+          class="mt-6"
+          text
+          color="error"
+          @click="matrix = !matrix"
+          absolute
+          right
+          ><v-icon>mdi-close</v-icon></v-btn
+        >
+        <div id="chart">
+          <apexchart
+            width="100%"
+            height="350"
+            type="heatmap"
+            :options="chartOptions"
+            :series="series"
+          ></apexchart>
+        </div>
+      </v-sheet>
+    </v-bottom-sheet>
+
     <v-overlay :value="overlay">
       <div
-        :style="`
+        :style="
+          `
           max-height: ${(windowSize.y * 80) / 100}px;
           max-width: ${(windowSize.x * 80) / 100}px;
-          overflow-y: auto;`"
+          overflow-y: auto;`
+        "
       >
         <v-card color="#FFFFFF" tile>
           <v-card-text>
@@ -194,11 +224,14 @@
 
 <script>
 import { mapActions } from "vuex";
+import VueApexCharts from "vue-apexcharts";
 import ThreatForm from "./ThreatForm.vue";
+
 export default {
   name: "ThreatList",
   components: {
     ThreatForm,
+    apexchart: VueApexCharts
   },
   computed: {
     headers() {
@@ -207,54 +240,84 @@ export default {
           text: this.$t("generic_table_header_id"),
           align: "start",
           sortable: false,
-          value: "id",
+          value: "id"
         },
         { text: this.$t("generic_table_header_name"), value: "name" },
         {
           text: this.$t("generic_table_header_description"),
-          value: "description",
+          value: "description"
         },
         {
           text: this.$t("generic_table_header_threat_type"),
-          value: "threat_type_name",
+          value: "threat_type_name"
         },
         {
           text: this.$t("generic_table_header_asset"),
-          value: "asset_name",
+          value: "asset_name"
         },
         {
           text: this.$t("generic_table_header_last_impact"),
-          value: "impact",
+          value: "impact"
         },
         {
           text: this.$t("generic_table_header_last_likelihood"),
-          value: "likelihood",
+          value: "likelihood"
         },
         {
           text: this.$t("generic_table_header_edit"),
           value: "edit",
-          sortable: false,
+          sortable: false
         },
         {
           text: this.$t("generic_table_header_delete"),
           value: "delete",
-          sortable: false,
-        },
+          sortable: false
+        }
       ];
     },
     //formData gets shaped in showCreateDialog and showEditDialog
     formData() {
       return {};
-    },
+    }
   },
   props: ["threats"],
   methods: {
     ...mapActions(["fetchAllThreats", "deleteThreat"]),
+    generateData(count, yrange) {
+      var i = 0;
+      var series = [];
+      while (i < count) {
+        var x = (i + 1).toString();
+        var y =
+          Math.floor(Math.random() * (yrange.max - yrange.min + 1)) +
+          yrange.min;
+        series.push({
+          x: x,
+          y: y
+        });
+        i++;
+      }
+      return series;
+    },
     onResize() {
       this.windowSize = { x: window.innerWidth, y: window.innerHeight };
     },
     toggleSheet() {
       this.sheet = !this.sheet;
+    },
+    toggleMatrix() {
+      this.matrix = !this.matrix;
+    },
+    showCreateMatrix() {
+      /*
+      this.fetchAllThreats();
+      this.formData.title = this.$t("threat_form_create");
+      this.formData.type = "Create";
+      this.formData.threat = {};
+      this.formData.threat.impact = 0;
+      this.formData.threat.likelihood = 0;
+      this.formData.resetFormValidation = true;*/
+      this.matrix = !this.matrix;
     },
     showCreateDialog() {
       this.fetchAllThreats();
@@ -289,9 +352,81 @@ export default {
         this.overlay = !this.overlay;
         this.fetchAllThreats();
       }
-    },
+    }
   },
   data: () => ({
+    chartOptions: {
+      plotOptions: {
+        heatmap: {
+          shadeIntensity: 0.5,
+          radius: 0,
+          useFillColorAsStroke: true,
+          colorScale: {
+            ranges: [
+              {
+                from: 0,
+                to: 25,
+                name: "low",
+                color: "#FFFF33"
+              },
+              {
+                from: 26,
+                to: 50,
+                name: "medium",
+                color: "#CCCC00"
+              },
+              {
+                from: 51,
+                to: 75,
+                name: "high",
+                color: "#FFB200"
+              },
+              {
+                from: 76,
+                to: 100,
+                name: "extreme",
+                color: "#FF0000"
+              }
+            ]
+          }
+        }
+      },
+      dataLabels: {
+        enabled: true
+      },
+      stroke: {
+        width: 1
+      },
+      xaxis: {
+        type: "category"
+      },
+      title: {
+        text: "Threat's Risk Matrix"
+      }
+    },
+    series: [
+      {
+        name: "1",
+        data: [1, 5, 25, 59, 75]
+      },
+      {
+        name: "2",
+        data: [15, 25, 40, 61, 75]
+      },
+      {
+        name: "3",
+        data: [33, 40, 50, 66, 83]
+      },
+      {
+        name: "4",
+        data: [45, 63, 67, 83, 94]
+      },
+      {
+        name: "5",
+        data: [67, 74, 84, 95, 100]
+      }
+    ],
+    matrix: false,
     sheet: false,
     search: "",
     selected: [],
@@ -300,9 +435,9 @@ export default {
     alertType: null,
     windowSize: {
       x: 0,
-      y: 0,
-    },
-  }),
+      y: 0
+    }
+  })
 };
 </script>
 
